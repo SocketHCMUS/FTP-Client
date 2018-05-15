@@ -80,18 +80,30 @@ int FTPClient::defineOrder(string order)
 		if (arrCmd[i].compare(order) == 0)
 			return i;
 }
+void FTPClient::getClauses(string cmd) 
+{
+	cmd.erase(0, cmd.find_first_of(' ') + 1);
+	this->argument.clear();
+	while (cmd.size() > 0)
+	{
+		argument.push_back(cmd.substr(0, cmd.find_first_of(' ')));
+		if(cmd.find(' ')!=std::string::npos)
+			cmd.erase(0, cmd.find_first_of(' ') + 1);
+		else break;
+	}
+}
 void FTPClient::getCmd()
 {
-	string cmd = "", order = "", clause = "";
+	string cmd = "", order = "";
 LOOP:cout << "FTP >> ";
 	getline(cin, cmd);
 	cmd = this->standardizedCMD(cmd);
 	order = cmd.substr(0, cmd.find_first_of(' '));
-
+	this->getClauses(cmd);
 	switch (defineOrder(order))
 	{
 	case 0: {				//open 127.0.0.1
-		clause = cmd.substr(cmd.find_first_of(' ') + 1, cmd.size() - cmd.find_first_of(' ') - 1);
+		string clause = argument[0];
 		if (clause == "localhost")
 			clause = "127.0.0.1";
 		this->hostIP = clause;
