@@ -6,6 +6,8 @@
 #include <afxsock.h>
 #include <string.h>
 #include <vector>
+#include<Windows.h>
+
 using namespace std;
 
 class FTPClient
@@ -20,6 +22,9 @@ private:
 	string request;
 	string respone;
 	vector<string> argument;
+
+	bool isLogged;
+	bool isConnected;
 public:
 	bool login();
 	bool connect();
@@ -45,7 +50,7 @@ public:
 	void cmd_quit();
 	void cmd_user();
 	void cmd_pass();
-
+	void cmd_clear() { system("cls"); getCmd(); }
 	//support function
 	string standardizedCMD(string);
 	int defineOrder(string);
