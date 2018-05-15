@@ -1,0 +1,16 @@
+﻿Build started 15/05/2018 17:35:46.
+     1>Project "c:\Users\ChienFx\Documents\Visual Studio 2013\Projects\FTPClient\FTPClient\FTPClient.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /D _AFXDLL /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"stdafx.h" /Fp"Debug\FTPClient.pch" /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt FTPClient.cpp
+         FTPClient.cpp
+     1>c:\users\chienfx\documents\visual studio 2013\projects\ftpclient\ftpclient\ftpclient.cpp(148): warning C4018: '<' : signed/unsigned mismatch
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"c:\Users\ChienFx\Documents\Visual Studio 2013\Projects\FTPClient\Debug\FTPClient.exe" /INCREMENTAL /NOLOGO /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /manifestinput:"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\Include\Manifest\dpiaware.manifest" /DEBUG /PDB:"c:\Users\ChienFx\Documents\Visual Studio 2013\Projects\FTPClient\Debug\FTPClient.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"c:\Users\ChienFx\Documents\Visual Studio 2013\Projects\FTPClient\Debug\FTPClient.lib" /MACHINE:X86 Debug\FTPClient.res
+         Debug\FTPClient.obj
+         Debug\stdafx.obj
+         FTPClient.vcxproj -> c:\Users\ChienFx\Documents\Visual Studio 2013\Projects\FTPClient\Debug\FTPClient.exe
+     1>Done Building Project "c:\Users\ChienFx\Documents\Visual Studio 2013\Projects\FTPClient\FTPClient\FTPClient.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:07.05
