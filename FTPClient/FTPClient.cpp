@@ -274,7 +274,6 @@ void FTPClient::cmd_lcd()
 	CString newDir(argument[0].c_str());
 	cout << newDir.GetString();
 	SetCurrentDirectory(newDir);
-	remove("a.txt");
 }
 void FTPClient::cmd_mdel()
 {
