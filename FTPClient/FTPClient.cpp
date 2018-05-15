@@ -111,7 +111,7 @@ LOOP:cout << "FTP >> ";
 	case 12: this->cmd_pwd(); break;
 	case 13: this->cmd_pasv(); break;
 	case 14: 
-	case 15: this->cmd_quit(); break;
+	case 15: {this->cmd_quit(); return;  break; }
 	default: {cout << "error syntax\n"; goto LOOP; }
 			 break;
 	}
@@ -190,6 +190,11 @@ void FTPClient::cmd_pass()
 {
 	request = "PASS " + password;
 	this->action();
+	if (this->getServerCode() == 530)
+	{
+		cout << "- Moi dang nhap lai!!" << endl;
+		this->login();
+	}
 }
 void FTPClient::cmd_ls()
 {
@@ -246,6 +251,8 @@ void FTPClient::cmd_put()
 }
 void FTPClient::cmd_quit()
 {
+	request = "QUIT";
+	this->action();
 }
 
 
@@ -268,4 +275,8 @@ int FTPClient::getDataPort()
 	return a * 256 + b;
 }
 
-
+int FTPClient::getServerCode()
+{
+	string str = this->respone.substr(0, this->respone.find_first_of(' '));
+	return atoi(str.c_str());
+}

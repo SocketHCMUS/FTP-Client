@@ -56,4 +56,5 @@ public:
 	~FTPClient();
 	void getCmd();
 	int getDataPort();
+	int getServerCode();
 };
