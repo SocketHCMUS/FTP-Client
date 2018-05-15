@@ -2,7 +2,7 @@
 
 #include "resource.h"
 #include <string>
-
+using namespace std;
 class FTPClient
 {
 private:
@@ -17,6 +17,9 @@ private:
 	//
 	void displayMessage();
 
+	//support function
+	string standardizedCMD(string);
+	int defineOrder(string);
 public:
 	FTPClient(){
 		//connect to server: 
