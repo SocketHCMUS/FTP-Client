@@ -7,9 +7,10 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","del","mdel","mkdir","rmdir","pwd","passive","quit","exit"};
 
 // The one and only application object
+vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","del",
+							"mdel","mkdir","rmdir","pwd","passive","quit","exit","clear","help"};
 
 CWinApp theApp;
 
@@ -23,10 +24,8 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
 	if (hModule != NULL)
 	{
-		// initialize MFC and print and error on failure
 		if (!AfxWinInit(hModule, NULL, ::GetCommandLine(), 0))
 		{
-			// TODO: change error code to suit your needs
 			_tprintf(_T("Fatal Error: MFC initialization failed\n"));
 			nRetCode = 1;
 		}
@@ -36,15 +35,12 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 				cout << "Khong the khoi tao Socket Libraray";
 				return FALSE;
 			}
-			// TODO: code your application's behavior here.
 			FTPClient client;
 			client.getCmd();
-			
 		}
 	}
 	else
 	{
-		// TODO: change error code to suit your needs
 		_tprintf(_T("Fatal Error: GetModuleHandle failed\n"));
 		nRetCode = 1;
 	}
@@ -52,7 +48,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 	return nRetCode;
 }
 
-//--------------------
+//----------------------------------------------------------------------------
 string FTPClient::standardizedCMD(string cmd)
 {
 	while (cmd[0] == ' ')
@@ -97,18 +93,37 @@ void FTPClient::getCmd()
 	string cmd = "", order = "";
 LOOP:cout << "FTP >> ";
 	getline(cin, cmd);
+	if (cmd == "")
+		goto LOOP;
 	cmd = this->standardizedCMD(cmd);
 	order = cmd.substr(0, cmd.find_first_of(' '));
 	this->getClauses(cmd);
+	if (!isLogged||!isConnected)
+	{
+		if (!isConnected&& !isLogged)
+		{
+			if (defineOrder(order) == 0) 
+			{
+				string clause = argument[0];
+				if (clause == "localhost")
+					clause = "127.0.0.1";
+				this->hostIP = clause;
+				this->connect();
+			}
+			else if (!isConnected) {
+				cout << "Please open connection\n";
+				goto LOOP;
+			}
+		}
+		else if(!isConnected)		{
+			cout << "Please open connection\n";
+			goto LOOP;
+		}
+		else login();
+	}
+	else
 	switch (defineOrder(order))
 	{
-	case 0: {				//open 127.0.0.1
-		string clause = argument[0];
-		if (clause == "localhost")
-			clause = "127.0.0.1";
-		this->hostIP = clause;
-		this->connect();
-	}break;
 	case 1: this->cmd_ls();	break;
 	case 2: this->cmd_put(); break;
 	case 3: this->cmd_get(); break;
@@ -123,26 +138,28 @@ LOOP:cout << "FTP >> ";
 	case 12: this->cmd_pwd(); break;
 	case 13: this->cmd_pasv(); break;
 	case 14: 
-	case 15: {this->cmd_quit(); return;  break; }
+	case 15: this->cmd_quit(); break;
+	case 16: this->cmd_clear(); break;
+	case 17: this->cmd_help(); break;
 	default: {cout << "error syntax\n"; goto LOOP; }
 			 break;
 	}
 	goto LOOP;
 }
-//{ 0."open",1."ls",2."put",3."get",4."mput",5."mget",6."cd",7."lcd",8."delete",9."mdelete",10."mkdir",11."rmdir",12."pwd",13."passive",14."quit",15."exit"};
+//{ 0."open",1."ls",2."put",3."get",4."mput",5."mget",6."cd",7."lcd",8."delete"
+//,9."mdelete",10."mkdir",11."rmdir",12."pwd",13."passive",14."quit",15."exit,16.clear",17."help"};
 //-----------------
-FTPClient::FTPClient(){
-
-	//this->dataPort = 0;
-	this->cmdClient.Create();//auto choose client port, TCP type,  CAsyncSocket instance should listen for client activity on all network interfaces.
-	//this->dataClient.Create();
-	//hostIP = "127.0.0.1";
+FTPClient::FTPClient()
+{
+	this->isConnected = 0;
+	this->isLogged = 0;
+	this->cmdClient.Create();
 }
 
-FTPClient::FTPClient(string mHostIP, int dataPort){
-
+FTPClient::FTPClient(string mHostIP, int dataPort)
+{
 	this->hostIP = mHostIP;
-	this->cmdClient.Create();//auto choose client port, TCP type,  CAsyncSocket instance should listen for client activity on all network interfaces.
+	this->cmdClient.Create();
 	wstring wstrHost;
 	wstrHost.assign(hostIP.begin(), hostIP.end());
 	if (cmdClient.Connect(wstrHost.c_str(), dataPort) == 0)
@@ -151,7 +168,7 @@ FTPClient::FTPClient(string mHostIP, int dataPort){
 FTPClient::~FTPClient()
 {
 	this->cmdClient.Close();
-	cout << "Close connection.";
+	//cout << "Close connection.";
 }
 bool FTPClient::login() {
 	cout << endl;
@@ -159,6 +176,9 @@ bool FTPClient::login() {
 	this->cmd_user();
 	cout << "PASSWORD: ";	getline(cin, this->password);
 	this->cmd_pass();
+	if (respone.substr(0, 3).compare("530") == 0)
+		login();
+	else isLogged = 1;
 	this->getCmd();
 	return true;
 }
@@ -169,6 +189,9 @@ bool FTPClient::connect()
 	if (cmdClient.Connect(wstrHost.c_str(), 21) != 0)
 	{
 		this->receive();
+		cout << respone;
+		if (respone.substr(0, 9).compare("Connected") == 0||respone.substr(0,3).compare("220")==0)
+			this->isConnected = 1;
 		this->displayMessage();
 		this->login();
 		return true;
@@ -191,7 +214,7 @@ int FTPClient::receive()
 }
 void FTPClient::displayMessage()
 {
-	cout << this->respone << endl;
+	cout << this->respone;
 }
 
 void FTPClient::cmd_user()
@@ -314,6 +337,7 @@ void FTPClient::cmd_get()
 {
 	this->cmd_get_core(this->argument.at(0));
 }
+
 void FTPClient::cmd_mget()
 {
 	for (int i = 0; i < this->argument.size(); i++)
@@ -324,6 +348,9 @@ void FTPClient::cmd_mget()
 
 void FTPClient::cmd_lcd()
 {
+	CString newDir(argument[0].c_str());
+	cout << newDir.GetString();
+	SetCurrentDirectory(newDir);
 }
 
 void FTPClient::cmd_put_core(const string filename)
@@ -362,6 +389,7 @@ void FTPClient::cmd_put_core(const string filename)
 	}
 	else
 		cout << filename << ": File not found" << endl;*/
+	
 }
 void FTPClient::cmd_put()
 {
@@ -372,11 +400,21 @@ void FTPClient::cmd_mput()
 }
 void FTPClient::cmd_quit()
 {
-	request = "QUIT";
-	this->action();
+	this->isLogged = 0; this->isConnected = 0;
+	cmdClient.Close();
 	exit(0);
 }
-
+void FTPClient::cmd_help()
+{
+	cout << "Commands may be abbreviated.  Commands are:";
+	for (int i=0;i<arrCmd.size();i++)
+	{
+		cout << setw(15) <<left<< arrCmd[i];
+		if (i % 3 == 0)
+			cout << endl;
+	}
+	cout << endl;
+}
 
 int FTPClient::getDataPort()
 {
