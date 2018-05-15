@@ -8,7 +8,7 @@
 #define new DEBUG_NEW
 #endif
 vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","delete",
-							"mdelete","mkdir","rmdir","pwd","passive","quit","exit","clear"};
+							"mdelete","mkdir","rmdir","pwd","passive","quit","exit","clear","help"};
 
 CWinApp theApp;
 
@@ -138,13 +138,14 @@ LOOP:cout << "FTP >> ";
 	case 14: 
 	case 15: this->cmd_quit(); break;
 	case 16: this->cmd_clear(); break;
+	case 17: this->cmd_help(); break;
 	default: {cout << "error syntax\n"; goto LOOP; }
 			 break;
 	}
 	goto LOOP;
 }
 //{ 0."open",1."ls",2."put",3."get",4."mput",5."mget",6."cd",7."lcd",8."delete"
-//,9."mdelete",10."mkdir",11."rmdir",12."pwd",13."passive",14."quit",15."exit,16.clear"};
+//,9."mdelete",10."mkdir",11."rmdir",12."pwd",13."passive",14."quit",15."exit,16.clear",17."help"};
 //-----------------
 FTPClient::FTPClient()
 {
@@ -297,6 +298,18 @@ void FTPClient::cmd_quit()
 	cmdClient.Close();
 	exit(0);
 }
+void FTPClient::cmd_help()
+{
+	cout << "Commands may be abbreviated.  Commands are:";
+	for (int i=0;i<arrCmd.size();i++)
+	{
+		cout << setw(15) <<left<< arrCmd[i];
+		if (i % 3 == 0)
+			cout << endl;
+	}
+	cout << endl;
+}
+
 int FTPClient::getDataPort()
 {
 	string str = this->respone;

@@ -7,7 +7,7 @@
 #include <string.h>
 #include <vector>
 #include<Windows.h>
-
+#include <iomanip> 
 using namespace std;
 
 class FTPClient
@@ -51,6 +51,7 @@ public:
 	void cmd_user();
 	void cmd_pass();
 	void cmd_clear() { system("cls"); getCmd(); }
+	void cmd_help();
 	//support function
 	string standardizedCMD(string);
 	int defineOrder(string);
