@@ -56,12 +56,25 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 //-----------------
 FTPClient::FTPClient(){
 
-	this->dataPort = 0;
+	//this->dataPort = 0;
 	this->cmdClient.Create();//auto choose client port, TCP type,  CAsyncSocket instance should listen for client activity on all network interfaces.
-	this->dataClient.Create();
-	hostIP = "127.0.0.1";
+	//this->dataClient.Create();
+	//hostIP = "127.0.0.1";
 }
 
+FTPClient::FTPClient(string mHostIP, int dataPort){
+
+	this->hostIP = mHostIP;
+	this->cmdClient.Create();//auto choose client port, TCP type,  CAsyncSocket instance should listen for client activity on all network interfaces.
+	wstring wstrHost;
+	wstrHost.assign(hostIP.begin(), hostIP.end());
+	if (cmdClient.Connect(wstrHost.c_str(), dataPort) == 0)
+		cout << "-Fatal error!!";
+}
+FTPClient::~FTPClient()
+{
+	this->cmdClient.Close();
+}
 bool FTPClient::connect()
 {
 	wstring wstrHost;
@@ -87,4 +100,62 @@ void FTPClient::receive()
 void FTPClient::displayMessage()
 {
 	cout << this->respone << endl;
+}
+
+void FTPClient::cmd_user()
+{
+	request = "USER " + user;
+	this->action();
+}
+void FTPClient::cmd_pass()
+{
+	request = "PASS " + password;
+	this->action();
+}
+void FTPClient::cmd_ls()
+{
+	this->cmd_pasv();
+	FTPClient dataClient(this->hostIP, this->getDataPort());
+	dataClient.request = "LIST\r\n";
+	dataClient.action();
+}
+void FTPClient::cmd_pwd()
+{
+	request = "PWD";
+	this->action();
+}
+void FTPClient::cmd_mkdir()
+{
+	request = "MKD " + argument.at(0);
+	this->action();
+}
+void FTPClient::cmd_rmdir()
+{
+	request = "RMD " + argument.at(0);
+	this->action();
+}
+
+void FTPClient::cmd_pasv()
+{
+	request = "pasv";
+	this->action();
+}
+
+int FTPClient::getDataPort()
+{
+	string str = this->respone;
+	int pos1 = 0; int count = 0;
+	for (; pos1 < str.length() && count < 4; pos1++)
+	{
+		if (str.at(pos1) == ',')
+			count++;
+	}
+
+	int pos2 = str.find_last_of(',');
+	string a_str = str.substr(pos1, pos2 - pos1);
+	pos1 = str.find_first_of(')');
+	string b_str = str.substr(pos2 + 1, pos1 - pos2);
+	int a = atoi(a_str.c_str());
+	int b = atoi(b_str.c_str());
+	return a * 256 + b;
 }
