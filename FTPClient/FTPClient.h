@@ -2,6 +2,7 @@
 #define MAX_LENGTH 1000
 #include "resource.h"
 #include <string>
+
 #include <afxsock.h>
 #include <string.h>
 #include <vector>
@@ -44,6 +45,11 @@ public:
 	void cmd_quit();
 	void cmd_user();
 	void cmd_pass();
+
+	//support function
+	string standardizedCMD(string);
+	int defineOrder(string);
+
 
 	FTPClient();
 	FTPClient(string mHostIP, int dataPort);
