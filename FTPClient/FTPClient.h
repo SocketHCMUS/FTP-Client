@@ -20,14 +20,14 @@ private:
 	string request;
 	string respone;
 	vector<string> argument;
-public:	
+public:
 	bool login();
 	bool connect();
 	//
 	void send();
 	void receive();
 	void displayMessage();
-	void action(){ this->send(); this->receive(); this->displayMessage(); }
+	void action() { this->send(); this->receive(); this->displayMessage(); }
 	//cmd
 	void cmd_ls();
 	void cmd_pwd();
@@ -49,7 +49,7 @@ public:
 	//support function
 	string standardizedCMD(string);
 	int defineOrder(string);
-
+	void getClauses(string cmd);
 
 	FTPClient();
 	FTPClient(string mHostIP, int dataPort);
