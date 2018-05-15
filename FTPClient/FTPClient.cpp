@@ -7,7 +7,7 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","delete","mdelete","mkdir","rmdir","pwd","passive","quit","exit"};
+vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","del","mdel","mkdir","rmdir","pwd","passive","quit","exit"};
 
 // The one and only application object
 
@@ -146,11 +146,12 @@ FTPClient::FTPClient(string mHostIP, int dataPort){
 	wstring wstrHost;
 	wstrHost.assign(hostIP.begin(), hostIP.end());
 	if (cmdClient.Connect(wstrHost.c_str(), dataPort) == 0)
-		cout << "-Fatal error!!";
+		cout << "-Fatal error: Cannot connect to port "<<dataPort;
 }
 FTPClient::~FTPClient()
 {
 	this->cmdClient.Close();
+	cout << "Close connection.";
 }
 bool FTPClient::login() {
 	cout << endl;
@@ -180,13 +181,13 @@ void FTPClient::send()
 {
 	this->cmdClient.Send(request.c_str(), request.length()+1, 0);
 }
-void FTPClient::receive()
+int FTPClient::receive()
 {
 	respone.clear();
 	char *temp = new char[MAX_LENGTH];
 	int len = this->cmdClient.Receive(temp, MAX_LENGTH, 0);
 	respone = string(temp).substr(0, len);
-
+	return len;
 }
 void FTPClient::displayMessage()
 {
@@ -204,16 +205,37 @@ void FTPClient::cmd_pass()
 	this->action();
 	if (this->getServerCode() == 530)
 	{
-		cout << "- Moi dang nhap lai!!" << endl;
+		cout << "Authentication failed. Try Again!" << endl;
 		this->login();
 	}
+}
+
+void FTPClient::cmd_pasv()
+{
+	request = "pasv";
+	this->action();
 }
 void FTPClient::cmd_ls()
 {
 	this->cmd_pasv();
-	FTPClient dataClient(this->hostIP, this->getDataPort());
-	dataClient.request = "LIST\r\n";
-	dataClient.action();
+	if (this->getServerCode() == 227)
+	{
+		FTPClient dataClient(this->hostIP, this->getDataPort());
+		this->request = "NLST\r\n";
+		this->action();
+		if (this->getServerCode() == 150)
+		{	
+			dataClient.receive();
+			dataClient.displayMessage();
+			if (this->getServerCode() != 226)
+			{
+				this->receive();
+				this->displayMessage();
+			}
+		}
+	}
+	else
+		cout << "Command Failed. Try again!"<<endl;
 }
 void FTPClient::cmd_pwd()
 {
@@ -231,40 +253,128 @@ void FTPClient::cmd_rmdir()
 	this->action();
 }
 
-void FTPClient::cmd_pasv()
-{
-	request = "pasv";
-	this->action();
-}
 void FTPClient::cmd_cd()
 {
+	request = "CWD " + argument.at(0);
+	this->action();
 }
 void FTPClient::cmd_del()
 {
+	request = "DELE " + argument.at(0);
+	this->action();
+}
+void FTPClient::cmd_mdel()
+{
+	for (int i = 0; i < this->argument.size(); i++)
+	{
+		cout << "Confirm to delete \"" + argument.at(i)+"\" ?";
+		char ch = getch();
+		if (ch == 'n' || ch == 'N')
+		{
+			cout << endl;
+			continue;
+		}
+		request = "DELE " + argument.at(i);
+		this->action();
+	}
+}
+void FTPClient::cmd_get_core(const string filename)
+{
+	this->cmd_pasv();
+	
+	if (this->getServerCode() == 227)
+	{
+		FTPClient *dataClient = new FTPClient(this->hostIP, this->getDataPort());
+		this->request = "RETR " + filename + "\r\n";
+		this->action();
+		if (this->getServerCode() == 150)
+		{
+			ofstream os = ofstream(filename, ios::binary);
+			if (os.is_open())
+			{
+				int length;
+				do
+				{
+					length = dataClient->receive();
+					os.write(dataClient->respone.c_str(), length);
+				} while (length > 0);
+				os.close();
+			}
+			else
+				cout << filename << ": File not found." << endl;
+		}
+		delete dataClient;
+	}
+	else
+	{
+		cout << "Command get failed. Try again!" << endl;
+	}
 }
 void FTPClient::cmd_get()
 {
+	this->cmd_get_core(this->argument.at(0));
 }
 void FTPClient::cmd_mget()
 {
+	for (int i = 0; i < this->argument.size(); i++)
+	{
+		this->cmd_get_core(this->argument.at(i));
+	}
 }
 
 void FTPClient::cmd_lcd()
 {
 }
-void FTPClient::cmd_mdel()
+
+void FTPClient::cmd_put_core(const string filename)
 {
-}
-void FTPClient::cmd_mput()
-{
+	/*ifstream fin;
+	fin.open(filename.c_str(), ios::binary);
+	if (fin.is_open())
+	{
+		this->cmd_pasv();
+		if (this->getServerCode() == 227)
+		{
+			FTPClient dataClient(this->hostIP, this->getDataPort());
+			this->request = "RETR " + filename + "\r\n";
+			this->action();
+			if (this->getServerCode() == 150)
+			{
+				ofstream os = ofstream(filename, ios::binary);
+				if (os.is_open())
+				{
+					int length;
+					do
+					{
+						length = dataClient.receive();
+						os.write(dataClient.respone.c_str(), length);
+					} while (length > 0);
+					os.close();
+				}
+				else
+					cout << "Command Failed. Try again!" << endl;
+			}
+		}
+		else
+		{
+			cout << "Command Failed. Try again!" << endl;
+		}
+	}
+	else
+		cout << filename << ": File not found" << endl;*/
 }
 void FTPClient::cmd_put()
+{
+
+}
+void FTPClient::cmd_mput()
 {
 }
 void FTPClient::cmd_quit()
 {
 	request = "QUIT";
 	this->action();
+	exit(0);
 }
 
 
