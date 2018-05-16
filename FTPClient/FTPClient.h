@@ -2,12 +2,14 @@
 #define MAX_LENGTH 1000
 #include "resource.h"
 #include <string>
-
+#include <fstream>
 #include <afxsock.h>
 #include <string.h>
 #include <vector>
-#include<Windows.h>
+#include <conio.h>
+#include <Windows.h>
 #include <iomanip> 
+
 using namespace std;
 
 class FTPClient
@@ -16,7 +18,7 @@ private:
 	CSocket cmdClient;
 	//CSocket dataClient;
 	//int		dataPort;
-	string user;
+	std::string user;
 	string password;
 	string hostIP;
 	string request;
@@ -30,7 +32,7 @@ public:
 	bool connect();
 	//
 	void send();
-	void receive();
+	int receive();
 	void displayMessage();
 	void action() { this->send(); this->receive(); this->displayMessage(); }
 	//cmd
@@ -39,7 +41,9 @@ public:
 	void cmd_cd();
 	void cmd_lcd();
 	void cmd_get();
+	void cmd_get_core(const string filename);
 	void cmd_put();
+	void cmd_put_core(const string filename);
 	void cmd_mget();
 	void cmd_mput();
 	void cmd_del();
@@ -62,4 +66,5 @@ public:
 	~FTPClient();
 	void getCmd();
 	int getDataPort();
+	int getServerCode();
 };
