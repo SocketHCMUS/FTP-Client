@@ -17,7 +17,7 @@ class FTPClient
 private:
 	CSocket cmdClient;
 	//CSocket dataClient;
-	//int		dataPort;
+
 	string user;
 	string password;
 	string hostIP;
@@ -25,6 +25,7 @@ private:
 	string respone;
 	vector<string> argument;
 
+	bool mode;//0: passive, 1:active
 	bool isLogged;
 	bool isConnected;
 public:
@@ -62,9 +63,28 @@ public:
 	void getClauses(string cmd);
 
 	FTPClient();
-	FTPClient(string mHostIP, int dataPort);
+	//FTPClient(string mHostIP, int dataPort);
 	~FTPClient();
 	void getCmd();
 	int getDataPort();
 	int getServerCode();
+
+	///active method
+	CSocket* openPort();
+	CSocket* openPassiveConnect();
+	CSocket* openActiveConnect();
+
 };
+CSocket* FTPClient::openPort()
+{
+	CSocket*dataClient = NULL;
+	if (this->mode == 0)//pass
+	{
+		dataClient = openPassiveConnect();
+	}
+	else
+	{
+		dataClient = openActiveConnect();
+	}
+	return dataClient;
+}

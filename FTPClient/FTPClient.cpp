@@ -154,16 +154,72 @@ FTPClient::FTPClient()
 	this->isConnected = 0;
 	this->isLogged = 0;
 	this->cmdClient.Create();
+	this->mode = 1;//active
 }
 
-FTPClient::FTPClient(string mHostIP, int dataPort)
+//FTPClient::FTPClient(string mHostIP, int dataPort)
+//{
+//	this->hostIP = mHostIP;
+//	this->cmdClient.Create();
+//	wstring wstrHost;
+//	wstrHost.assign(hostIP.begin(), hostIP.end());
+//	if (cmdClient.Connect(wstrHost.c_str(), dataPort) == 0)
+//		cout << "-Fatal error: Cannot connect to port "<<dataPort;
+//}
+
+CSocket* FTPClient::openPassiveConnect()
 {
-	this->hostIP = mHostIP;
-	this->cmdClient.Create();
+	CSocket *dataClient = new CSocket();
+	if (!dataClient->Create()){
+		delete dataClient;
+		return NULL;
+	}
+
+	this->cmd_pasv();
+	int dataPort = this->getDataPort();
+
 	wstring wstrHost;
-	wstrHost.assign(hostIP.begin(), hostIP.end());
-	if (cmdClient.Connect(wstrHost.c_str(), dataPort) == 0)
-		cout << "-Fatal error: Cannot connect to port "<<dataPort;
+	wstrHost.assign(this->hostIP.begin(), this->hostIP.end());
+	
+	if (dataClient->Connect(wstrHost.c_str(), dataPort) == 0)
+	{
+		cout << "Cannot connect to port " << dataPort;
+		delete dataClient;
+		return NULL;
+	}
+	return dataClient;
+}
+
+CSocket* FTPClient::openActiveConnect()
+{
+	CSocket * dataClient = new CSocket();
+	CString hostIP;
+	unsigned int dataPort;
+	short p0, p1;
+
+	if (!dataClient->Create()) {
+		delete dataClient;
+		return NULL;
+	}
+
+	dataClient->GetSockName(hostIP, dataPort);//get current dataPort
+	p1 = dataPort / 256;
+	p0 = dataPort % 256;
+
+	if (!dataClient->Listen(1)) {
+		delete dataClient;
+		return NULL;
+	}
+
+	this->request = "PORT "+this->hostIP +"."+ to_string(p1) + "." + to_string(p0) + "\r\n";
+	this->action();
+
+	if (this->getServerCode() != 200) {
+		delete dataClient;
+		return NULL;
+	}
+
+	return dataClient;
 }
 FTPClient::~FTPClient()
 {
@@ -210,6 +266,7 @@ int FTPClient::receive()
 	char *temp = new char[MAX_LENGTH];
 	int len = this->cmdClient.Receive(temp, MAX_LENGTH, 0);
 	respone = string(temp).substr(0, len);
+	delete temp;
 	return len;
 }
 void FTPClient::displayMessage()
@@ -240,16 +297,43 @@ void FTPClient::cmd_pasv()
 }
 void FTPClient::cmd_ls()
 {
-	this->cmd_pasv();
-	if (this->getServerCode() == 227)
+	CSocket*dataClient = this->openPort();
+	if (dataClient && (this->getServerCode() == 227||this->getServerCode() == 200))
 	{
-		FTPClient dataClient(this->hostIP, this->getDataPort());
 		this->request = "NLST\r\n";
 		this->action();
-		if (this->getServerCode() == 150)
+		if (this->getServerCode() == 150 || this->getServerCode()==226)
 		{	
-			dataClient.receive();
-			dataClient.displayMessage();
+			if (this->mode == 1)//active
+			{
+				if (dataClient->Listen(1) == false)
+				{
+					cout << "Cannot listen on this port" << endl;
+					return;
+				}
+				CSocket Connector;
+				if (dataClient->Accept(Connector))
+				{
+					char *temp = new char[MAX_LENGTH];
+					int len = Connector.Receive(temp, MAX_LENGTH, 0);
+					temp[len] = 0;
+					cout << temp;
+					delete temp;
+				}
+				else
+				{
+					cout << "Cannot Accept this connector" << endl;
+				}
+			}
+			else
+			{
+				char *temp = new char[MAX_LENGTH];
+				int len = dataClient->Receive(temp, MAX_LENGTH, 0);
+				temp[len] = 0;
+				cout << temp;
+				delete temp;
+			}
+			
 			if (this->getServerCode() != 226)
 			{
 				this->receive();
@@ -259,6 +343,7 @@ void FTPClient::cmd_ls()
 	}
 	else
 		cout << "Command Failed. Try again!"<<endl;
+	delete dataClient;
 }
 void FTPClient::cmd_pwd()
 {
@@ -303,35 +388,60 @@ void FTPClient::cmd_mdel()
 }
 void FTPClient::cmd_get_core(const string filename)
 {
-	this->cmd_pasv();
+	CSocket*dataClient = openPort();
 	
-	if (this->getServerCode() == 227)
+	if (dataClient && this->getServerCode() == 227|| this->getServerCode()==200)//200: command success
 	{
-		FTPClient *dataClient = new FTPClient(this->hostIP, this->getDataPort());
 		this->request = "RETR " + filename + "\r\n";
 		this->action();
-		if (this->getServerCode() == 150)
+		if (this->getServerCode() == 150 )//150: pasv port, 
 		{
+
 			ofstream os = ofstream(filename, ios::binary);
 			if (os.is_open())
 			{
-				int length;
+				CSocket *culi = dataClient; //defautly culi works in passive mode
+				CSocket Connector;
+				if (this->mode == 1)//active
+				{
+					if (dataClient->Listen(1) == false)
+					{
+						cout << "Cannot listen on this port" << endl;
+						return;
+					}
+					
+					if (dataClient->Accept(Connector))
+						culi = &Connector;	//now culi works in acive mode
+					else
+						cout << "Cannot Accept this connector" << endl;
+				}
+				//
+				int len;
+				char *temp = new char[MAX_LENGTH];
 				do
 				{
-					length = dataClient->receive();
-					os.write(dataClient->respone.c_str(), length);
-				} while (length > 0);
+					memset(temp, 0, MAX_LENGTH);
+					len = culi->Receive(temp, MAX_LENGTH, 0);
+					os.write(temp, len);
+				} while (len > 0);
 				os.close();
+				delete temp;
+
+			if (this->getServerCode() != 226)
+				{
+					this->receive();
+					this->displayMessage();
+				}
 			}
 			else
 				cout << filename << ": File not found." << endl;
 		}
-		delete dataClient;
 	}
 	else
 	{
 		cout << "Command get failed. Try again!" << endl;
 	}
+	delete dataClient;
 }
 void FTPClient::cmd_get()
 {
@@ -355,43 +465,63 @@ void FTPClient::cmd_lcd()
 
 bool FTPClient::cmd_put_core(const string filename)
 {
+	bool res = true;
 	ifstream fin;
 	fin.open(filename.c_str(), ios::binary);
 	if (fin.is_open())
 	{
-		this->cmd_pasv();
-		if (this->getServerCode() == 227)
+		CSocket*dataClient = openPort();
+		if (dataClient && this->getServerCode() == 227 || this->getServerCode() == 200)//200: command success
 		{
-			FTPClient dataClient(this->hostIP, this->getDataPort());
 			this->request = "STOR " + filename + "\r\n";
-			this->action();
+			this->action();//150
 			if (this->getServerCode() == 150)
 			{
-				
+				CSocket * culi = dataClient;//culi defaut transfer as passive mode
+				CSocket Connector;
 				streamsize len;
 				char*data = new char[MAX_LENGTH];
+				if (this->mode == 1)//active
+				{
+					if (dataClient->Listen(1) == false)
+					{
+						cout << "Cannot listen on this port" << endl;
+						return false;
+					}
+					
+					if (dataClient->Accept(Connector))
+						culi = &Connector;
+					else
+					{
+						cout << "Cannot Accept this connector" << endl;
+						return false;
+					}
+				}
+				//
 				while (!fin.eof())
 				{
 					memset(data, 0, MAX_LENGTH);
 					fin.read(data, MAX_LENGTH);
 					len = fin.gcount();
-					dataClient.cmdClient.Send(data, len);
+					culi->Send(data, len);
 				}
 				fin.close();
+				delete data;
 			}
 		}
 		else
 		{
 			cout << "Command Failed. Try again!" << endl;
-			return false;
+			res = false;
 		}
+		delete dataClient;
 	}
 	else
 	{
 		cout << filename << ": File not found" << endl;
-		return false;
+		res = false;
 	}
-	return true;
+	return res;
 	
 }
 void FTPClient::cmd_put()
@@ -463,7 +593,15 @@ int FTPClient::getDataPort()
 
 int FTPClient::getServerCode()
 {
-	string str = this->respone.substr(0, this->respone.find_first_of(' '));
-	//string str = this->respone.substr(this->respone.find_first_of('\n')+1, this->respone.find_first_of(' '));
+	string str = "";
+	int pos = respone.find_first_of('\n');
+	if (pos == respone.size() - 1)
+		str = respone.substr(0, respone.find_first_of(' '));
+	else
+	{
+		str = respone.substr(pos + 1, respone.size());
+		str = str.substr(0, str.find_first_of(' '));
+	}
+
 	return atoi(str.c_str());
 }
