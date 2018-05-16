@@ -290,7 +290,7 @@ void FTPClient::cmd_mdel()
 {
 	for (int i = 0; i < this->argument.size(); i++)
 	{
-		cout << "Confirm to delete \"" + argument.at(i)+"\" ?";
+		cout << "Confirm to delete \"" + argument.at(i)+"\" ?\n";
 		char ch = getch();
 		if (ch == 'n' || ch == 'N')
 		{
@@ -353,9 +353,9 @@ void FTPClient::cmd_lcd()
 	SetCurrentDirectory(newDir);
 }
 
-void FTPClient::cmd_put_core(const string filename)
+bool FTPClient::cmd_put_core(const string filename)
 {
-	/*ifstream fin;
+	ifstream fin;
 	fin.open(filename.c_str(), ios::binary);
 	if (fin.is_open())
 	{
@@ -363,40 +363,66 @@ void FTPClient::cmd_put_core(const string filename)
 		if (this->getServerCode() == 227)
 		{
 			FTPClient dataClient(this->hostIP, this->getDataPort());
-			this->request = "RETR " + filename + "\r\n";
+			this->request = "STOR " + filename + "\r\n";
 			this->action();
 			if (this->getServerCode() == 150)
 			{
-				ofstream os = ofstream(filename, ios::binary);
-				if (os.is_open())
+				
+				streamsize len;
+				char*data = new char[MAX_LENGTH];
+				while (!fin.eof())
 				{
-					int length;
-					do
-					{
-						length = dataClient.receive();
-						os.write(dataClient.respone.c_str(), length);
-					} while (length > 0);
-					os.close();
+					memset(data, 0, MAX_LENGTH);
+					fin.read(data, MAX_LENGTH);
+					len = fin.gcount();
+					dataClient.cmdClient.Send(data, len);
 				}
-				else
-					cout << "Command Failed. Try again!" << endl;
+				fin.close();
 			}
 		}
 		else
 		{
 			cout << "Command Failed. Try again!" << endl;
+			return false;
 		}
 	}
 	else
-		cout << filename << ": File not found" << endl;*/
+	{
+		cout << filename << ": File not found" << endl;
+		return false;
+	}
+	return true;
 	
 }
 void FTPClient::cmd_put()
 {
-
+	bool res =this->cmd_put_core(this->argument.at(0));
+	if (this->getServerCode()!=226 && res==1)
+	{
+		this->receive();
+		this->displayMessage();
+	}
 }
 void FTPClient::cmd_mput()
 {
+	bool res;
+	for (int i = 0; i < this->argument.size(); i++)
+	{
+		cout << "Upload \"" + this->argument.at(i) + "\"? "<<endl;
+		char ch = getch();
+		if (ch == 'n' || ch == 'N')
+		{
+			cout << endl;
+			continue;
+		}
+		res = this->cmd_put_core(this->argument.at(i));
+		if (this->getServerCode() != 226 && res == 1)
+		{
+			this->receive();
+			this->displayMessage();
+		}
+	}
+	
 }
 void FTPClient::cmd_quit()
 {
@@ -438,5 +464,6 @@ int FTPClient::getDataPort()
 int FTPClient::getServerCode()
 {
 	string str = this->respone.substr(0, this->respone.find_first_of(' '));
+	//string str = this->respone.substr(this->respone.find_first_of('\n')+1, this->respone.find_first_of(' '));
 	return atoi(str.c_str());
 }

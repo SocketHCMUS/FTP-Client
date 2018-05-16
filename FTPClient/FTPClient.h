@@ -43,7 +43,7 @@ public:
 	void cmd_get();
 	void cmd_get_core(const string filename);
 	void cmd_put();
-	void cmd_put_core(const string filename);
+	bool cmd_put_core(const string filename);
 	void cmd_mget();
 	void cmd_mput();
 	void cmd_del();
