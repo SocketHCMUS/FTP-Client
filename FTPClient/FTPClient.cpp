@@ -285,9 +285,11 @@ void FTPClient::cmd_mdel()
 }
 void FTPClient::cmd_mput()
 {
+
 }
 void FTPClient::cmd_put()
 {
+
 }
 void FTPClient::cmd_quit()
 {

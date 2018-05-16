@@ -1,0 +1,8 @@
+﻿  FTPClient.cpp
+d:\dev\c++\ftp-client\ftpclient\ftpclient.cpp(57): warning C4018: '<': signed/unsigned mismatch
+d:\dev\c++\ftp-client\ftpclient\ftpclient.cpp(61): warning C4018: '<': signed/unsigned mismatch
+d:\dev\c++\ftp-client\ftpclient\ftpclient.cpp(73): warning C4018: '<': signed/unsigned mismatch
+d:\dev\c++\ftp-client\ftpclient\ftpclient.cpp(304): warning C4018: '<': signed/unsigned mismatch
+d:\dev\c++\ftp-client\ftpclient\ftpclient.cpp(317): warning C4018: '<': signed/unsigned mismatch
+d:\dev\c++\ftp-client\ftpclient\ftpclient.cpp(76): warning C4715: 'FTPClient::defineOrder': not all control paths return a value
+  FTPClient.vcxproj -> D:\Dev\C++\FTP-Client\Debug\FTPClient.exe
