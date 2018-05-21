@@ -16,15 +16,15 @@ class FTPClient
 {
 private:
 	CSocket cmdClient;
-	//CSocket dataClient;
-	//int		dataPort;
 	std::string user;
+
 	string password;
 	string hostIP;
 	string request;
 	string respone;
 	vector<string> argument;
 
+	bool mode;//0: passive, 1:active
 	bool isLogged;
 	bool isConnected;
 public:
@@ -43,7 +43,7 @@ public:
 	void cmd_get();
 	void cmd_get_core(const string filename);
 	void cmd_put();
-	void cmd_put_core(const string filename);
+	bool cmd_put_core(const string filename);
 	void cmd_mget();
 	void cmd_mput();
 	void cmd_del();
@@ -56,15 +56,38 @@ public:
 	void cmd_pass();
 	void cmd_clear() { system("cls"); getCmd(); }
 	void cmd_help();
+	void cmd_dir();
+	
 	//support function
 	string standardizedCMD(string);
 	int defineOrder(string);
 	void getClauses(string cmd);
+	string getCurrentDirectory();
+	bool checkIP();
 
 	FTPClient();
-	FTPClient(string mHostIP, int dataPort);
+	//FTPClient(string mHostIP, int dataPort);
 	~FTPClient();
 	void getCmd();
 	int getDataPort();
 	int getServerCode();
+
+	///active method
+	CSocket* openPort();
+	CSocket* openPassiveConnect();
+	CSocket* openActiveConnect();
+
 };
+CSocket* FTPClient::openPort()
+{
+	CSocket*dataClient = NULL;
+	if (this->mode == 0)//passive
+	{
+		dataClient = openPassiveConnect();
+	}
+	else
+	{
+		dataClient = openActiveConnect();
+	}
+	return dataClient;
+}
