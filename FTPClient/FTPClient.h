@@ -1,5 +1,7 @@
 #pragma once
 #define MAX_LENGTH 1000
+#define MODE_ACTIVE 1
+#define MODE_PASSIVE 0
 #include "resource.h"
 #include <string>
 #include <fstream>
@@ -57,7 +59,8 @@ public:
 	void cmd_clear() { system("cls"); getCmd(); }
 	void cmd_help();
 	void cmd_dir();
-	
+	void cmd_passive();
+	void cmd_active();
 	//support function
 	string standardizedCMD(string);
 	int defineOrder(string);
@@ -81,7 +84,7 @@ public:
 CSocket* FTPClient::openPort()
 {
 	CSocket*dataClient = NULL;
-	if (this->mode == 0)//passive
+	if (this->mode == MODE_PASSIVE)
 	{
 		dataClient = openPassiveConnect();
 	}

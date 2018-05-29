@@ -10,7 +10,7 @@
 
 // The one and only application object
 vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","del",
-							"mdel","mkdir","rmdir","pwd","pasv","quit","exit","clear","help","cd","open"};
+							"mdel","mkdir","rmdir","pwd","pasv","quit","exit","clear","help","cd", "passive", "active"};
 CWinApp theApp;
 
 using namespace std;
@@ -152,9 +152,17 @@ LOOP:cout << "FTP >> ";
 		this->cmd_cd(); break;
 	}
 	else {
+			this->cmd_pwd();  break;
+		}
+	case 7:
+		if (argument[0] != order)
+		{
+			this->cmd_lcd(); break;
+		}
+		else{
 			this->cmd_dir();  break;
-		}//view current path
-	case 7: this->cmd_lcd(); break;
+		}
+		
 	case 8: this->cmd_del(); break;
 	case 9: this->cmd_mdel(); break;
 	case 10: this->cmd_mkdir(); break;
@@ -165,7 +173,10 @@ LOOP:cout << "FTP >> ";
 	case 15: this->cmd_quit(); break;
 	case 16: this->cmd_clear(); break;
 	case 17: this->cmd_help(); break;
-	case 18: this->cmd_dir(); break;
+
+
+	case 19: this->cmd_passive(); break;
+	case 20: this->cmd_active(); break;
 	default: {cout << "error syntax\n"; goto LOOP; }
 			 break;
 	}
@@ -177,7 +188,7 @@ FTPClient::FTPClient()
 	this->isConnected = 0;
 	this->isLogged = 0;
 	this->cmdClient.Create();
-	this->mode = 1;//active
+	this->mode = MODE_ACTIVE;
 }
 
 //FTPClient::FTPClient(string mHostIP, int dataPort)
@@ -274,7 +285,6 @@ bool FTPClient::connect()
 	if (cmdClient.Connect(wstrHost.c_str(), 21) != 0)
 	{
 		this->receive();
-		cout << respone;
 		this->isConnected = 1;
 
 		this->displayMessage();
@@ -327,9 +337,8 @@ void FTPClient::cmd_pass()
 
 void FTPClient::cmd_pasv()
 {
-	mode = 0;
-	//request = "pasv";
-	//this->action();
+	request = "pasv";
+	this->action();
 }
 void FTPClient::cmd_ls()
 {
@@ -340,7 +349,7 @@ void FTPClient::cmd_ls()
 		this->action();
 		if (this->getServerCode() == 150 || this->getServerCode()==226)
 		{	
-			if (this->mode == 1)//active
+			if (this->mode == MODE_ACTIVE)//active
 			{
 				if (dataClient->Listen(1) == false)
 				{
@@ -439,7 +448,7 @@ void FTPClient::cmd_get_core(const string filename)
 			{
 				CSocket *culi = dataClient; //defautly culi works in passive mode
 				CSocket Connector;
-				if (this->mode == 1)//active
+				if (this->mode == MODE_ACTIVE)
 				{
 					if (dataClient->Listen(1) == false)
 					{
@@ -523,7 +532,7 @@ bool FTPClient::cmd_put_core(const string filename)
 				CSocket Connector;
 				streamsize len;
 				char*data = new char[MAX_LENGTH];
-				if (this->mode == 1)//active
+				if (this->mode == MODE_ACTIVE)//active
 				{
 					if (dataClient->Listen(1) == false)
 					{
@@ -658,4 +667,26 @@ string FTPClient::getCurrentDirectory()
 	for (int i = 0; i<dwRet; i++)
 		path+=(char)*(Buffer + i);
 	return path;
+}
+
+void FTPClient::cmd_passive()
+{ 
+
+	if (this->mode == MODE_ACTIVE)
+	{
+		this->mode = MODE_PASSIVE;
+		cout << "Switch to PASSIVE mode successful.\n";
+	}
+	else
+		cout << "You are currently in passive mode.\n";
+	
+}
+void FTPClient::cmd_active()
+{
+	if (this->mode == MODE_PASSIVE) {
+		this->mode = MODE_ACTIVE;
+		cout << "Switch to ACTIVE mode successful.\n";
+	}
+	else
+		cout << "You are currently in ACTIVE mode.\n";
 }
