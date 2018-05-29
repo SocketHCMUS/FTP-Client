@@ -1,4 +1,4 @@
-// FTPClient.cpp : Defines the entry point for the console application.
+﻿// FTPClient.cpp : Defines the entry point for the console application.
 //
 
 #include "stdafx.h"
@@ -10,7 +10,7 @@
 
 // The one and only application object
 vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","del",
-							"mdel","mkdir","rmdir","pwd","pasv","quit","exit","clear","help","dir","open"};
+							"mdel","mkdir","rmdir","pwd","pasv","quit","exit","clear","help","cd","open"};
 CWinApp theApp;
 
 using namespace std;
@@ -34,7 +34,6 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 				cout << "Khong the khoi tao Socket Libraray";
 				return FALSE;
 			}
-
 			FTPClient client;
 			client.getCmd();
 		}
@@ -49,6 +48,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 }
 
 //----------------------------------------------------------------------------
+
 string FTPClient::standardizedCMD(string cmd)
 {
 	while (cmd[0] == ' ')
@@ -132,8 +132,8 @@ LOOP:cout << "FTP >> ";
 				goto LOOP;
 			}
 		}
-		else if(!isConnected)		{
-			cout << "Please open connection\n";
+		else if(!isConnected){
+				cout << "Please open connection\n";
 			goto LOOP;
 		}
 		else login();
@@ -141,12 +141,19 @@ LOOP:cout << "FTP >> ";
 	else
 	switch (defineOrder(order))
 	{
+	case 0: this->connect();
 	case 1: this->cmd_ls();	break;
 	case 2: this->cmd_put(); break;
 	case 3: this->cmd_get(); break;
 	case 4: this->cmd_mput(); break;
 	case 5: this->cmd_mget(); break;
-	case 6: this->cmd_cd(); break;
+	case 6: if (argument[0] != order)
+	{
+		this->cmd_cd(); break;
+	}
+	else {
+			this->cmd_dir();  break;
+		}//view current path
 	case 7: this->cmd_lcd(); break;
 	case 8: this->cmd_del(); break;
 	case 9: this->cmd_mdel(); break;
@@ -268,12 +275,13 @@ bool FTPClient::connect()
 	{
 		this->receive();
 		cout << respone;
-		if (respone.substr(0, 9).compare("Connected") == 0||respone.substr(0,3).compare("220")==0)
-			this->isConnected = 1;
+		this->isConnected = 1;
+
 		this->displayMessage();
 		this->login();
 		return true;
 	}
+	else cout << "Can't connect to server.Make sure your server is online !\n";
 	return false;
 }
 
@@ -293,7 +301,12 @@ int FTPClient::receive()
 }
 void FTPClient::displayMessage()
 {
-	cout << this->respone;
+	if (respone[0] == -51 || respone[2] == -51)
+	{
+		cout << "Connection is broken !\n";
+		cmdClient.Close();
+	}
+	else 	cout << this->respone;
 }
 
 void FTPClient::cmd_user()
@@ -314,8 +327,9 @@ void FTPClient::cmd_pass()
 
 void FTPClient::cmd_pasv()
 {
-	request = "pasv";
-	this->action();
+	mode = 0;
+	//request = "pasv";
+	//this->action();
 }
 void FTPClient::cmd_ls()
 {
@@ -385,6 +399,7 @@ void FTPClient::cmd_rmdir()
 
 void FTPClient::cmd_cd()
 {
+	cout << argument[0] << endl << endl;
 	request = "CWD " + argument.at(0);
 	this->action();
 }
