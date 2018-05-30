@@ -227,7 +227,7 @@ CSocket* FTPClient::openPassiveConnect()
 CSocket* FTPClient::openActiveConnect()
 {
 	CSocket * dataClient = new CSocket();
-	CString hostIP;
+	CString dataIP;
 	unsigned int dataPort;
 	short p0, p1;
 
@@ -236,16 +236,23 @@ CSocket* FTPClient::openActiveConnect()
 		return NULL;
 	}
 
-	dataClient->GetSockName(hostIP, dataPort);//get current dataPort
+	dataClient->GetSockName(dataIP, dataPort);//get current dataPort
+	unsigned int tmp;
+	this->cmdClient.GetSockName(dataIP, tmp);
 	p1 = dataPort / 256;
 	p0 = dataPort % 256;
-
+	cout << "DataIP: " << dataIP;
 	if (!dataClient->Listen(1)) {
 		delete dataClient;
 		return NULL;
 	}
 
-	this->request = "PORT "+this->hostIP +"."+ to_string(p1) + "." + to_string(p0) + "\r\n";
+	// Convert a TCHAR string to a LPCSTR
+	CT2CA pszConvertedAnsiString(dataIP);
+	// construct a std::string using the LPCSTR input
+	std::string ip(pszConvertedAnsiString);
+
+	this->request = "PORT " + ip + "." + to_string(p1) + "." + to_string(p0) + "\r\n";
 	this->action();
 
 	if (this->getServerCode() != 200) {
@@ -274,7 +281,8 @@ bool FTPClient::login() {
 
 	if (respone.substr(0, 3).compare("530") == 0)
 		login();
-	else isLogged = 1;
+	else 
+		isLogged = 1;
 	this->getCmd();
 	return true;
 }
