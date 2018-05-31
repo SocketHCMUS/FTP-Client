@@ -2,6 +2,36 @@
 #define MAX_LENGTH 1000
 #define MODE_ACTIVE 1
 #define MODE_PASSIVE 0
+#define IP_LOCALHOST "127.0.0.1"
+#define Request_open 0
+#define Request_ls 1
+#define Request_put 2
+#define Request_get 3
+#define Request_mput 4
+#define Request_mget 5
+#define Request_cd 6
+#define Request_lcd 7
+#define Request_del 8
+#define Request_mdel 9
+#define Request_mkdir 10
+#define Request_rmdir 11
+#define Request_pwd 12
+#define Request_pasv 13
+#define Request_quit 14
+#define Request_exit 15
+#define Request_clear 16
+#define Request_help 17
+#define Request_dir 18
+#define Request_passive 19
+#define Request_active 20
+
+#define ENTER 13
+#define DELETE -32
+#define BACKSPACE 8
+
+#define FailLoggin "530"
+#define isBreakCNN -51
+
 #include "resource.h"
 #include <string>
 #include <fstream>
