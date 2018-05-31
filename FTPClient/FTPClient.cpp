@@ -10,7 +10,7 @@
 
 // The one and only application object
 vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","del",
-							"mdel","mkdir","rmdir","pwd","pasv","quit","exit","clear","help","cd", "passive", "active"};
+							"mdel","mkdir","rmdir","pwd","pasv","quit","exit","clear","help","dir", "passive", "active"};
 CWinApp theApp;
 
 using namespace std;
@@ -173,8 +173,7 @@ LOOP:cout << "FTP >> ";
 	case 15: this->cmd_quit(); break;
 	case 16: this->cmd_clear(); break;
 	case 17: this->cmd_help(); break;
-
-
+	case 18: this->cmd_dir(); break;
 	case 19: this->cmd_passive(); break;
 	case 20: this->cmd_active(); break;
 	default: {cout << "error syntax\n"; goto LOOP; }
@@ -209,17 +208,26 @@ CSocket* FTPClient::openPassiveConnect()
 		return NULL;
 	}
 
+	int dataPort = 0;
 	this->cmd_pasv();
-	int dataPort = this->getDataPort();
-
-	wstring wstrHost;
-	wstrHost.assign(this->hostIP.begin(), this->hostIP.end());
-	
-	if (dataClient->Connect(wstrHost.c_str(), dataPort) == 0)
+	if (this->getServerCode() == 227)
 	{
-		cout << "Cannot connect to port " << dataPort;
+		dataPort = this->getDataPort();
+		wstring wstrHost;
+		wstrHost.assign(this->hostIP.begin(), this->hostIP.end());
+
+		if (dataClient->Connect(wstrHost.c_str(), dataPort) == 0)
+		{
+			cout << "DataClient cannot connect to server " << dataPort << endl;
+			delete dataClient;
+			dataClient = NULL;
+		}
+	}
+	else
+	{
+		cout << "Cannot connect to server " << dataPort << endl;
 		delete dataClient;
-		return NULL;
+		dataClient = NULL;
 	}
 	return dataClient;
 }
@@ -241,7 +249,7 @@ CSocket* FTPClient::openActiveConnect()
 	this->cmdClient.GetSockName(dataIP, tmp);
 	p1 = dataPort / 256;
 	p0 = dataPort % 256;
-	cout << "DataIP: " << dataIP;
+
 	if (!dataClient->Listen(1)) {
 		delete dataClient;
 		return NULL;
@@ -348,12 +356,12 @@ void FTPClient::cmd_pasv()
 	request = "pasv";
 	this->action();
 }
-void FTPClient::cmd_ls()
+void FTPClient::cmd_list_core(const string command)
 {
 	CSocket*dataClient = this->openPort();
 	if (dataClient && (this->getServerCode() == 227||this->getServerCode() == 200))
 	{
-		this->request = "NLST\r\n";
+		this->request = command+"\r\n";
 		this->action();
 		if (this->getServerCode() == 150 || this->getServerCode()==226)
 		{	
@@ -398,6 +406,14 @@ void FTPClient::cmd_ls()
 		cout << "Command Failed. Try again!"<<endl;
 	delete dataClient;
 }
+void FTPClient::cmd_dir()
+{
+	this->cmd_list_core("LIST");
+}
+void FTPClient::cmd_ls()
+{
+	this->cmd_list_core("NLST");
+}
 void FTPClient::cmd_pwd()
 {
 	request = "PWD";
@@ -440,6 +456,7 @@ void FTPClient::cmd_mdel()
 		this->action();
 	}
 }
+
 void FTPClient::cmd_get_core(const string filename)
 {
 	CSocket*dataClient = openPort();
@@ -501,7 +518,6 @@ void FTPClient::cmd_get()
 {
 	this->cmd_get_core(this->argument.at(0));
 }
-
 void FTPClient::cmd_mget()
 {
 	for (int i = 0; i < this->argument.size(); i++)
@@ -509,16 +525,13 @@ void FTPClient::cmd_mget()
 		this->cmd_get_core(this->argument.at(i));
 	}
 }
-void FTPClient::cmd_dir()
-{
-	cout << "Local directory now " << getCurrentDirectory() << endl;
-}
+
 void FTPClient::cmd_lcd()
 {
 	CString newDir(argument[0].c_str());
 	SetCurrentDirectory(newDir);
 	if (argument[0] == getCurrentDirectory())
-		cmd_dir();
+		cout << "Local directory now " << getCurrentDirectory() << endl;
 	else cout << "Local directory has not been changed !\n";
 }
 
@@ -586,16 +599,12 @@ bool FTPClient::cmd_put_core(const string filename)
 void FTPClient::cmd_put()
 {
 	this->cmd_put_core(argument[0]);
-}
-/*void FTPClient::cmd_mput()
-{
-	bool res =this->cmd_put_core(this->argument.at(0));
-	if (this->getServerCode()!=226 && res==1)
+	if (this->getServerCode() != 226)
 	{
 		this->receive();
 		this->displayMessage();
 	}
-}*/
+}
 void FTPClient::cmd_mput()
 {
 	bool res;
@@ -616,6 +625,7 @@ void FTPClient::cmd_mput()
 		}
 	}
 }
+
 void FTPClient::cmd_quit()
 {
 	this->isLogged = 0; this->isConnected = 0;

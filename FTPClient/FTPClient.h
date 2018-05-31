@@ -36,9 +36,17 @@ public:
 	void send();
 	int receive();
 	void displayMessage();
-	void action() { this->send(); this->receive(); this->displayMessage(); }
+	void action() 
+	{ 
+		this->send(); 
+		this->receive(); 
+		this->displayMessage(); 
+	}
 	//cmd
+
+	void FTPClient::cmd_list_core(const string command);
 	void cmd_ls();
+	void cmd_dir();
 	void cmd_pwd();
 	void cmd_cd();
 	void cmd_lcd();
@@ -58,7 +66,7 @@ public:
 	void cmd_pass();
 	void cmd_clear() { system("cls"); getCmd(); }
 	void cmd_help();
-	void cmd_dir();
+	
 	void cmd_passive();
 	void cmd_active();
 	//support function
