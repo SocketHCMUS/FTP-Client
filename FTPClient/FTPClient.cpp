@@ -1,15 +1,12 @@
-﻿// FTPClient.cpp : Defines the entry point for the console application.
-//
-
 #include "stdafx.h"
 #include "FTPClient.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
+;
 // The one and only application object
-vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","del",
+const vector<string> arrCmd = { "open","ls","put","get","mput","mget","cd","lcd","del",
 							"mdel","mkdir","rmdir","pwd","pasv","quit","exit","clear","help","dir", "passive", "active"};
 CWinApp theApp;
 
@@ -51,11 +48,13 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
 string FTPClient::standardizedCMD(string cmd)
 {
+	//earse the extra whitespaces
 	while (cmd[0] == ' ')
 		cmd.erase(0, 1);
 	while (cmd[cmd.size() - 1] == ' ')
 		cmd.erase(cmd.size() - 1, 1);
 
+	//all cmd will be lowered
 	for (int i = 0; i < cmd.size(); i++)
 	{
 		if (isalpha(cmd[i]) && isupper(cmd[i]))
@@ -89,6 +88,8 @@ void FTPClient::getClauses(string cmd)
 }
 bool FTPClient::checkIP()
 {
+	// The true IP will be formated x.x.x.x 
+	//ex: 192.168.1.1
 	for (auto c : argument[0])
 		if (!isdigit(c) && c != '.')
 			return 0;
@@ -103,22 +104,26 @@ LOOP:cout << "FTP >> ";
 	getline(cin, cmd);
 	if (cmd == "")
 		goto LOOP;
-	cmd = this->standardizedCMD(cmd);
-	order = cmd.substr(0, cmd.find_first_of(' '));
+
+	cmd = this->standardizedCMD(cmd);				
+	order = cmd.substr(0, cmd.find_first_of(' '));	//get request
+
 	if (order == "help")
 	{
 		this->cmd_help();
 		getCmd();
 	}
+
 	this->getClauses(cmd);
+
 	if (!isLogged||!isConnected)
 	{
-		if (!isConnected&& !isLogged)
+		if (!isConnected && !isLogged)
 		{
-			if (defineOrder(order) == 0) 
+			if (defineOrder(order) == Request_open) 
 			{
 				if (argument[0] == "localhost")
-					argument[0] = "127.0.0.1";
+					argument[0] = IP_LOCALHOST;
 				if (!checkIP())
 				{
 					cout << "IP incorrect!\n";
@@ -141,41 +146,39 @@ LOOP:cout << "FTP >> ";
 	else
 	switch (defineOrder(order))
 	{
-	case 0: this->connect();
-	case 1: this->cmd_ls();	break;
-	case 2: this->cmd_put(); break;
-	case 3: this->cmd_get(); break;
-	case 4: this->cmd_mput(); break;
-	case 5: this->cmd_mget(); break;
-	case 6: if (argument[0] != order)
+	case Request_open: this->connect(); break;
+	case Request_ls: this->cmd_ls();	break;
+	case Request_put: this->cmd_put(); break;
+	case Request_get: this->cmd_get(); break;
+	case Request_mput: this->cmd_mput(); break;
+	case Request_mget: this->cmd_mget(); break;
+	case Request_cd: 
+	{	if (argument[0] != order)
+			this->cmd_cd(); 
+		else 
+			this->cmd_pwd(); 
+	}break;
+	case Request_lcd:
 	{
-		this->cmd_cd(); break;
-	}
-	else {
-			this->cmd_pwd();  break;
-		}
-	case 7:
 		if (argument[0] != order)
-		{
-			this->cmd_lcd(); break;
-		}
-		else{
-			this->cmd_dir();  break;
-		}
-		
-	case 8: this->cmd_del(); break;
-	case 9: this->cmd_mdel(); break;
-	case 10: this->cmd_mkdir(); break;
-	case 11: this->cmd_rmdir(); break;
-	case 12: this->cmd_pwd(); break;
-	case 13: this->cmd_pasv(); break;
-	case 14: 
-	case 15: this->cmd_quit(); break;
-	case 16: this->cmd_clear(); break;
-	case 17: this->cmd_help(); break;
-	case 18: this->cmd_dir(); break;
-	case 19: this->cmd_passive(); break;
-	case 20: this->cmd_active(); break;
+			this->cmd_lcd();
+		else
+			this->cmd_dir();
+	}break;
+	case Request_del: this->cmd_del(); break;
+	case Request_mdel: this->cmd_mdel(); break;
+	case Request_mkdir: this->cmd_mkdir(); break;
+	case Request_rmdir: this->cmd_rmdir(); break;
+	case Request_pwd: this->cmd_pwd(); break;
+	case Request_pasv: this->cmd_pasv(); break;
+	case Request_quit: 
+	case Request_exit: this->cmd_quit(); break;
+	case Request_clear: this->cmd_clear(); break;
+	case Request_help: this->cmd_help(); break;
+	case Request_dir: this->cmd_dir(); break;
+	case Request_passive: this->cmd_passive(); break;
+	case Request_active: this->cmd_active(); break;
+
 	default: {cout << "error syntax\n"; goto LOOP; }
 			 break;
 	}
@@ -189,16 +192,6 @@ FTPClient::FTPClient()
 	this->cmdClient.Create();
 	this->mode = MODE_ACTIVE;
 }
-
-//FTPClient::FTPClient(string mHostIP, int dataPort)
-//{
-//	this->hostIP = mHostIP;
-//	this->cmdClient.Create();
-//	wstring wstrHost;
-//	wstrHost.assign(hostIP.begin(), hostIP.end());
-//	if (cmdClient.Connect(wstrHost.c_str(), dataPort) == 0)
-//		cout << "-Fatal error: Cannot connect to port "<<dataPort;
-//}
 
 CSocket* FTPClient::openPassiveConnect()
 {
@@ -249,7 +242,6 @@ CSocket* FTPClient::openActiveConnect()
 	this->cmdClient.GetSockName(dataIP, tmp);
 	p1 = dataPort / 256;
 	p0 = dataPort % 256;
-
 	if (!dataClient->Listen(1)) {
 		delete dataClient;
 		return NULL;
@@ -273,21 +265,30 @@ CSocket* FTPClient::openActiveConnect()
 FTPClient::~FTPClient()
 {
 	this->cmdClient.Close();
-	//cout << "Close connection.";
 }
 bool FTPClient::login() {
-	cout << endl;
-	cout << "USERNAME: ";	getline(cin, this->user);	this->cmd_user();
+	cout <<endl<< "USERNAME: ";	getline(cin, this->user);	this->cmd_user();
 	cout << "PASSWORD: ";	
 	char ch=_getch();
-	while (ch != 13) {//character 13 is enter
-		this->password.push_back(ch);
-		cout << '*';
+	password.clear();
+	while (ch != ENTER) {//character 13 is enter
+		if (ch == DELETE || ch == BACKSPACE)
+		{
+			if (password.size() > 0)
+				password.erase(password.size() - 1, 1);
+			if (ch == DELETE)
+				ch = _getch();
+		}
+		else
+		{
+			this->password.push_back(ch);
+			cout << '*';
+		}
 		ch = _getch();
 	} cout << endl;
 	this->cmd_pass();
 
-	if (respone.substr(0, 3).compare("530") == 0)
+	if (respone.substr(0, 3).compare(FailLoggin) == 0)
 		login();
 	else 
 		isLogged = 1;
@@ -327,7 +328,7 @@ int FTPClient::receive()
 }
 void FTPClient::displayMessage()
 {
-	if (respone[0] == -51 || respone[2] == -51)
+	if (respone[0] == isBreakCNN || respone[2] == isBreakCNN)
 	{
 		cout << "Connection is broken !\n";
 		cmdClient.Close();
@@ -630,11 +631,13 @@ void FTPClient::cmd_quit()
 {
 	this->isLogged = 0; this->isConnected = 0;
 	cmdClient.Close();
+	cout << "Good bye !\n";
+	Sleep(900);
 	exit(0);
 }
 void FTPClient::cmd_help()
 {
-	cout << "Commands may be abbreviated.  Commands are:";
+	cout << "Commands may be abbreviated.  Commands are:\n";
 	for (int i=0;i<arrCmd.size();i++)
 	{
 		cout << setw(15) <<left<< arrCmd[i];
