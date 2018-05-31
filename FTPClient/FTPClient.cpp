@@ -45,7 +45,22 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 }
 
 //----------------------------------------------------------------------------
+/*Constructor & Destructor*/
+FTPClient::FTPClient()
+{
+	this->isConnected = 0;
+	this->isLogged = 0;
+	this->cmdClient.Create();
+	this->mode = MODE_ACTIVE;
+}
 
+FTPClient::~FTPClient()
+{
+	this->cmdClient.Close();
+}
+
+
+/*Get user command Functions*/
 string FTPClient::standardizedCMD(string cmd)
 {
 	//earse the extra whitespaces
@@ -68,12 +83,14 @@ string FTPClient::standardizedCMD(string cmd)
 	}
 	return cmd;
 }
+
 int FTPClient::defineOrder(string order)
 {
 	for (int i = 0; i < arrCmd.size(); i++)
 		if (arrCmd[i].compare(order) == 0)
 			return i;
 }
+
 void FTPClient::getClauses(string cmd) 
 {
 	cmd.erase(0, cmd.find_first_of(' ') + 1);
@@ -86,6 +103,7 @@ void FTPClient::getClauses(string cmd)
 		else break;
 	}
 }
+
 bool FTPClient::checkIP()
 {
 	// The true IP will be formated x.x.x.x 
@@ -97,6 +115,7 @@ bool FTPClient::checkIP()
 		return 0;
 	return 1;
 }
+
 void FTPClient::getCmd()
 {
 	string cmd = "", order = "";
@@ -163,7 +182,7 @@ LOOP:cout << "FTP >> ";
 		if (argument[0] != order)
 			this->cmd_lcd();
 		else
-			this->cmd_dir();
+			cout << "Local directory now:" << getCurrentDirectory() << endl;
 	}break;
 	case Request_del: this->cmd_del(); break;
 	case Request_mdel: this->cmd_mdel(); break;
@@ -185,12 +204,19 @@ LOOP:cout << "FTP >> ";
 	goto LOOP;
 }
 
-FTPClient::FTPClient()
+/*Open port and connect to server*/
+CSocket* FTPClient::openPort()
 {
-	this->isConnected = 0;
-	this->isLogged = 0;
-	this->cmdClient.Create();
-	this->mode = MODE_ACTIVE;
+	CSocket*dataClient = NULL;
+	if (this->mode == MODE_PASSIVE)
+	{
+		dataClient = openPassiveConnect();
+	}
+	else
+	{
+		dataClient = openActiveConnect();
+	}
+	return dataClient;
 }
 
 CSocket* FTPClient::openPassiveConnect()
@@ -262,10 +288,9 @@ CSocket* FTPClient::openActiveConnect()
 
 	return dataClient;
 }
-FTPClient::~FTPClient()
-{
-	this->cmdClient.Close();
-}
+
+
+/*Init user access*/
 bool FTPClient::login() {
 	cout <<endl<< "USERNAME: ";	getline(cin, this->user);	this->cmd_user();
 	cout << "PASSWORD: ";	
@@ -295,6 +320,24 @@ bool FTPClient::login() {
 	this->getCmd();
 	return true;
 }
+
+void FTPClient::cmd_user()
+{
+	request = "USER " + user;
+	this->action();
+}
+
+void FTPClient::cmd_pass()
+{
+	request = "PASS " + password;
+	this->action();
+	if (this->getServerCode() == 530)
+	{
+		cout << "Authentication failed. Try Again!" << endl;
+		this->login();
+	}
+}
+
 bool FTPClient::connect()
 {
 	wstring wstrHost;
@@ -312,51 +355,123 @@ bool FTPClient::connect()
 	return false;
 }
 
-
-void FTPClient::send()
-{
-	this->cmdClient.Send(request.c_str(), request.length()+1, 0);
-}
-int FTPClient::receive()
-{
-	respone.clear();
-	char *temp = new char[MAX_LENGTH];
-	int len = this->cmdClient.Receive(temp, MAX_LENGTH, 0);
-	respone = string(temp).substr(0, len);
-	delete temp;
-	return len;
-}
-void FTPClient::displayMessage()
-{
-	if (respone[0] == isBreakCNN || respone[2] == isBreakCNN)
-	{
-		cout << "Connection is broken !\n";
-		cmdClient.Close();
-	}
-	else 	cout << this->respone;
-}
-
-void FTPClient::cmd_user()
-{
-	request = "USER " + user;
-	this->action();
-}
-void FTPClient::cmd_pass()
-{
-	request = "PASS " + password;
-	this->action();
-	if (this->getServerCode() == 530)
-	{
-		cout << "Authentication failed. Try Again!" << endl;
-		this->login();
-	}
-}
+/**Non-transfer Commands*/
 
 void FTPClient::cmd_pasv()
 {
 	request = "pasv";
 	this->action();
 }
+
+void FTPClient::cmd_cd()
+{
+	cout << argument[0] << endl << endl;
+	request = "CWD " + argument.at(0);
+	this->action();
+}
+
+void FTPClient::cmd_lcd()
+{
+	CString newDir(argument[0].c_str());
+	SetCurrentDirectory(newDir);
+	if (argument[0] == getCurrentDirectory())
+		cout << "Local directory now:" << getCurrentDirectory() << endl;
+	else cout << "Local directory has not been changed !\n";
+}
+
+void FTPClient::cmd_pwd()
+{
+	request = "PWD";
+	this->action();
+}
+
+void FTPClient::cmd_mkdir()
+{
+	request = "MKD " + argument.at(0);
+	this->action();
+}
+
+void FTPClient::cmd_rmdir()
+{
+	request = "RMD " + argument.at(0);
+	this->action();
+}
+
+void FTPClient::cmd_del()
+{
+	request = "DELE " + argument.at(0);
+	this->action();
+}
+
+void FTPClient::cmd_mdel()
+{
+	for (int i = 0; i < this->argument.size(); i++)
+	{
+		cout << "Confirm to delete \"" + argument.at(i)+"\" ?\n";
+		char ch = getch();
+		if (ch == 'n' || ch == 'N')
+		{
+			cout << endl;
+			continue;
+		}
+		request = "DELE " + argument.at(i);
+		this->action();
+	}
+}
+
+void FTPClient::cmd_quit()
+{
+	this->isLogged = 0; this->isConnected = 0;
+	cmdClient.Close();
+	cout << "Good bye !\n";
+	Sleep(900);
+	exit(0);
+}
+
+void FTPClient::cmd_help()
+{
+	cout << "Commands may be abbreviated.  Commands are:\n";
+	for (int i = 0; i<arrCmd.size(); i++)
+	{
+		cout << setw(15) << left << arrCmd[i];
+		if (i % 3 == 0)
+			cout << endl;
+	}
+	cout << endl;
+}
+
+void FTPClient::cmd_passive()
+{
+
+	if (this->mode == MODE_ACTIVE)
+	{
+		this->mode = MODE_PASSIVE;
+		cout << "Switch to PASSIVE mode successful.\n";
+	}
+	else
+		cout << "You are currently in passive mode.\n";
+
+}
+
+void FTPClient::cmd_active()
+{
+	if (this->mode == MODE_PASSIVE) {
+		this->mode = MODE_ACTIVE;
+		cout << "Switch to ACTIVE mode successful.\n";
+	}
+	else
+		cout << "You are currently in ACTIVE mode.\n";
+}
+
+void FTPClient::cmd_clear()
+{
+	system("cls");
+	getCmd();
+}
+
+
+/*Transfer Commands*/
+/*Listing methods*/
 void FTPClient::cmd_list_core(const string command)
 {
 	CSocket*dataClient = this->openPort();
@@ -407,57 +522,18 @@ void FTPClient::cmd_list_core(const string command)
 		cout << "Command Failed. Try again!"<<endl;
 	delete dataClient;
 }
+
 void FTPClient::cmd_dir()
 {
 	this->cmd_list_core("LIST");
 }
+
 void FTPClient::cmd_ls()
 {
 	this->cmd_list_core("NLST");
 }
-void FTPClient::cmd_pwd()
-{
-	request = "PWD";
-	this->action();
-}
-void FTPClient::cmd_mkdir()
-{
-	request = "MKD " + argument.at(0);
-	this->action();
-}
-void FTPClient::cmd_rmdir()
-{
-	request = "RMD " + argument.at(0);
-	this->action();
-}
 
-void FTPClient::cmd_cd()
-{
-	cout << argument[0] << endl << endl;
-	request = "CWD " + argument.at(0);
-	this->action();
-}
-void FTPClient::cmd_del()
-{
-	request = "DELE " + argument.at(0);
-	this->action();
-}
-void FTPClient::cmd_mdel()
-{
-	for (int i = 0; i < this->argument.size(); i++)
-	{
-		cout << "Confirm to delete \"" + argument.at(i)+"\" ?\n";
-		char ch = getch();
-		if (ch == 'n' || ch == 'N')
-		{
-			cout << endl;
-			continue;
-		}
-		request = "DELE " + argument.at(i);
-		this->action();
-	}
-}
-
+/*Download Methods*/
 void FTPClient::cmd_get_core(const string filename)
 {
 	CSocket*dataClient = openPort();
@@ -515,10 +591,12 @@ void FTPClient::cmd_get_core(const string filename)
 	}
 	delete dataClient;
 }
+
 void FTPClient::cmd_get()
 {
 	this->cmd_get_core(this->argument.at(0));
 }
+
 void FTPClient::cmd_mget()
 {
 	for (int i = 0; i < this->argument.size(); i++)
@@ -527,15 +605,8 @@ void FTPClient::cmd_mget()
 	}
 }
 
-void FTPClient::cmd_lcd()
-{
-	CString newDir(argument[0].c_str());
-	SetCurrentDirectory(newDir);
-	if (argument[0] == getCurrentDirectory())
-		cout << "Local directory now " << getCurrentDirectory() << endl;
-	else cout << "Local directory has not been changed !\n";
-}
 
+/*Upload Methods*/
 bool FTPClient::cmd_put_core(const string filename)
 {
 	bool res = true;
@@ -597,6 +668,7 @@ bool FTPClient::cmd_put_core(const string filename)
 	return res;
 	
 }
+
 void FTPClient::cmd_put()
 {
 	this->cmd_put_core(argument[0]);
@@ -606,6 +678,7 @@ void FTPClient::cmd_put()
 		this->displayMessage();
 	}
 }
+
 void FTPClient::cmd_mput()
 {
 	bool res;
@@ -627,26 +700,9 @@ void FTPClient::cmd_mput()
 	}
 }
 
-void FTPClient::cmd_quit()
-{
-	this->isLogged = 0; this->isConnected = 0;
-	cmdClient.Close();
-	cout << "Good bye !\n";
-	Sleep(900);
-	exit(0);
-}
-void FTPClient::cmd_help()
-{
-	cout << "Commands may be abbreviated.  Commands are:\n";
-	for (int i=0;i<arrCmd.size();i++)
-	{
-		cout << setw(15) <<left<< arrCmd[i];
-		if (i % 3 == 0)
-			cout << endl;
-	}
-	cout << endl;
-}
 
+
+/*Support Functions*/
 int FTPClient::getDataPort()
 {
 	string str = this->respone;
@@ -666,6 +722,38 @@ int FTPClient::getDataPort()
 	return a * 256 + b;
 }
 
+void FTPClient::action()
+{
+	this->send();
+	this->receive();
+	this->displayMessage();
+}
+
+void FTPClient::send()
+{
+	this->cmdClient.Send(request.c_str(), request.length() + 1, 0);
+}
+
+int FTPClient::receive()
+{
+	respone.clear();
+	char *temp = new char[MAX_LENGTH];
+	int len = this->cmdClient.Receive(temp, MAX_LENGTH, 0);
+	respone = string(temp).substr(0, len);
+	delete temp;
+	return len;
+}
+
+void FTPClient::displayMessage()
+{
+	if (respone[0] == isBreakCNN || respone[2] == isBreakCNN)
+	{
+		cout << "Connection is broken !\n";
+		cmdClient.Close();
+	}
+	else 	cout << this->respone;
+}
+
 int FTPClient::getServerCode()
 {
 	string str = "";
@@ -679,6 +767,7 @@ int FTPClient::getServerCode()
 	}
 	return atoi(str.c_str());
 }
+
 string FTPClient::getCurrentDirectory()
 {
 	string path = "";
@@ -690,24 +779,3 @@ string FTPClient::getCurrentDirectory()
 	return path;
 }
 
-void FTPClient::cmd_passive()
-{ 
-
-	if (this->mode == MODE_ACTIVE)
-	{
-		this->mode = MODE_PASSIVE;
-		cout << "Switch to PASSIVE mode successful.\n";
-	}
-	else
-		cout << "You are currently in passive mode.\n";
-	
-}
-void FTPClient::cmd_active()
-{
-	if (this->mode == MODE_PASSIVE) {
-		this->mode = MODE_ACTIVE;
-		cout << "Switch to ACTIVE mode successful.\n";
-	}
-	else
-		cout << "You are currently in ACTIVE mode.\n";
-}

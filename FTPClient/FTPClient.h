@@ -56,79 +56,68 @@ private:
 	string respone;
 	vector<string> argument;
 
-	bool mode;//0: passive, 1:active
+	bool mode;
 	bool isLogged;
 	bool isConnected;
-public:
+
+	/*Methods*/
+	CSocket* openPort();
+	CSocket* openPassiveConnect();
+	CSocket* openActiveConnect();
+
 	bool login();
 	bool connect();
-	//
-	void send();
-	int receive();
-	void displayMessage();
-	void action() 
-	{ 
-		this->send(); 
-		this->receive(); 
-		this->displayMessage(); 
-	}
-	//cmd
 
 	void FTPClient::cmd_list_core(const string command);
 	void cmd_ls();
 	void cmd_dir();
+
 	void cmd_pwd();
 	void cmd_cd();
 	void cmd_lcd();
-	void cmd_get();
+	
+	
 	void cmd_get_core(const string filename);
-	void cmd_put();
-	bool cmd_put_core(const string filename);
+	void cmd_get();
 	void cmd_mget();
+	
+	bool cmd_put_core(const string filename);
+	void cmd_put();
 	void cmd_mput();
+
 	void cmd_del();
 	void cmd_mdel();
 	void cmd_mkdir();
 	void cmd_rmdir();
 	void cmd_pasv();
+
 	void cmd_quit();
 	void cmd_user();
 	void cmd_pass();
-	void cmd_clear() { system("cls"); getCmd(); }
+	void cmd_clear();
 	void cmd_help();
 	
 	void cmd_passive();
 	void cmd_active();
+
 	//support function
 	string standardizedCMD(string);
 	int defineOrder(string);
 	void getClauses(string cmd);
 	string getCurrentDirectory();
 	bool checkIP();
-
-	FTPClient();
-	//FTPClient(string mHostIP, int dataPort);
-	~FTPClient();
-	void getCmd();
+		
 	int getDataPort();
 	int getServerCode();
 
-	///active method
-	CSocket* openPort();
-	CSocket* openPassiveConnect();
-	CSocket* openActiveConnect();
+	void send();
+	int receive();
+	void displayMessage();
+	void action();
+	
+public:
+	FTPClient();
+	~FTPClient();
+	void getCmd();
 
 };
-CSocket* FTPClient::openPort()
-{
-	CSocket*dataClient = NULL;
-	if (this->mode == MODE_PASSIVE)
-	{
-		dataClient = openPassiveConnect();
-	}
-	else
-	{
-		dataClient = openActiveConnect();
-	}
-	return dataClient;
-}
